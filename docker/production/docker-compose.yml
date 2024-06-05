@@ -9,10 +9,10 @@
 version: '3'
 
 services:
-  simulator_node:
+  task_node:
     build:
       context: .
-      dockerfile: simulator_node.dockerfile
+      dockerfile: production_architecture.dockerfile
     environment:
       - DISPLAY=$DISPLAY
       - LIBGL_ALWAYS_INDIRECT=1
@@ -31,7 +31,7 @@ services:
               count: 1
               capabilities: [gpu]
 
-    rosserial:
+    embedded:
       build:
         context: .
         dockerfile: rosserial.dockerfile

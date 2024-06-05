@@ -1,16 +1,20 @@
-# TODO: Put important dependencies of embedded  in here
-# This image at the end of compiling the ROS codes it will
-# delete the ros depedenciies inside /opt/ros/noetic
-# Because it will share it with the Vision image with a volume.
-
-
-
-# This Dockerfile is for building the Arduino image for the Rosserial Arduino Library.
-#  From the Hydrus_Embedded repository: https://github.com/Cruiz102/Hydrus_Embedded
+# The following Dockerfile is from this Repository that isthe official repository
+#  that the arduino community reference for downloading rosserial :
+# https://github.com/frankjoshua/rosserial_arduino_lib/blob/master/Dockerfile
+# The Official 
 FROM ros:noetic-ros-base
 # Set the 
-ENV ARDUINO_BOARD="arduino:avr:uno"
+ENV ARDUINO_BOARD="arduino:avr:mega"
 
+
+RUN  /bin/bash -c 'source /opt/ros/noetic/setup.bash && \
+    mkdir -p /home/catkin_ws/src && \
+    cd /home/catkin_ws/ && \
+    catkin_make && \
+    source devel/setup.bash'
+
+
+RUN apt update && apt install -y ros-noetic-rosserial-arduino && rm -rf /var/lib/apt/
 
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -38,11 +42,13 @@ RUN arduino-cli lib  install "Servo@1.2.1"
 RUN arduino-cli lib install "BlueRobotics MS5837 Library@1.1.1"
 WORKDIR /root/Arduino/libraries
 # Download the Hydrus_Embedded library from github
-RUN git clone https://github.com/Cruiz102/Hydrus_Embedded.git
+RUN git clone https://github.com/Rumarino-Team/sensor_actuator_pkg.git
+# COPY ../ ./sensor_actuator_pkg
+# Copy entrypoint script
+COPY entrypoint.sh /embedded_entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Delete the ros depedencies inside /opt/ros/noetic
-# Because it will share it with the Vision image with a volume.
-RUN rm -rf /opt/ros/noetic
+WORKDIR /home/catkin_ws/
 
-WORKDIR /root/Arduino/libraries/Hydrus_Embedded/examples
-# CMD [ "arduino-cli compile --fqbn $ARDUINO_BOARD Hydrus.ino" ]
+ENTRYPOINT ["/embedded_entrypoint.sh"]
+CMD ["bash"]

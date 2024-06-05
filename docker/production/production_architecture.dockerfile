@@ -1,58 +1,39 @@
-# TODO: Put the important Controls and architecture dependencies here.
+FROM osrf/ros:noetic-desktop-full
 
-FROM osrf/ros:melodic-ros-base
+# Set non-interactive mode for apt
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install dependencies
-RUN apt update && apt install -y\
- ros-melodic-smach\
- ros-melodic-smach-ros\
- ros-melodic-executive-smach\
+# Install smach and smach_viewer
+# Update and install dependencies
+RUN apt update && apt install -y \
+ ros-noetic-smach-ros \
+ ros-noetic-executive-smach \
+ ros-noetic-smach-viewer \
  vim\
- python-rosdep\
- python-rosinstall\
- python-rosinstall-generator\
- python-wstool\
- build-essential\
- ros-melodic-catkin\
- python-catkin-tools\
- python-scipy
+ git
 
-# Update dependencies
-RUN rosdep update
-RUN apt-get update && apt-get dist-upgrade
 
-# Create a Catkin Workspace
-RUN mkdir -p /root/catkin_ws/src
-WORKDIR /root/catkin_ws
-RUN . /opt/ros/melodic/setup.sh && \
- catkin_make
+RUN /bin/bash -c 'source /opt/ros/noetic/setup.bash && \
+    mkdir -p /home/ubuntu/catkin_ws/src && \
+    cd /home/ubuntu/catkin_ws/ && \
+    catkin_make && \
+    source devel/setup.bash'
 
-# Download ROS packages
-WORKDIR /root/catkin_ws/src
-RUN git clone https://github.com/uuvsimulator/uuv_simulator.git
-RUN git clone https://github.com/uuvsimulator/rexrov2.git
-RUN git clone https://github.com/stereolabs/zed-ros-interfaces.git
-RUN git clone https://github.com/Rumarino-Team/Hydrus.git
+# Install PIP
+RUN apt update && \
+    apt install python3-pip -y && \
+    rm -rf /var/lib/apt/lists/*
 
 
 
-#  We add this for  solving the following issue:
-#https://github.com/uuvsimulator/uuv_simulator/issues/376
-# The solution was to add the following line to the package.xml file of uuv_simulation_evaluation
-#<build_depend>uuv_simulation_evaluation<\/build_depend>
-# https://github.com/uuvsimulator/uuv_simulation_evaluation/pull/54/files
+# Install Sensors Dependencies
+WORKDIR /home/ubuntu/catkin_ws/src
+RUN git clone https://github.com/stereolabs/zed-ros-interfaces.git  && \
+    git clone https://github.com/Rumarino-Team/Hydrus.git &&\
+    git clone https://github.com/Rumarino-Team/Task_Module.git 
 
-# This issue seems to happen when we install other packages  in the same workspace
-# that are not from the uuvsimulator organization.
-RUN git clone https://github.com/uuvsimulator/uuv_simulation_evaluation.git && \
-sed -i '/<buildtool_depend>catkin<\/buildtool_depend>/a \ \ <build_depend>uuv_simulation_evaluation<\/build_depend>' /root/catkin_ws/src/uuv_simulation_evaluation/uuv_smac_utils/package.xml
+WORKDIR /home/ubuntu/catkin_ws
 
+RUN rosdep install --from-paths src --ignore-src -r -y
 
-# Install packages and their dependencies
-WORKDIR /root/catkin_ws
-RUN . /opt/ros/melodic/setup.sh && \
- . /root/catkin_ws/devel/setup.sh && \
- catkin_make install
-
-# Add setup.sh for catkin workspace to bashrc
-RUN echo "source /root/catkin_ws/devel/setup.sh" >> ~/.bashrc
+RUN catkin_make
